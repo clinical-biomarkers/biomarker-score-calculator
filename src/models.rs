@@ -32,6 +32,6 @@ pub struct Specimen {
 
 #[derive(Serialize, Debug)]
 pub struct BiomarkerScore {
-    biomarker_id: String,
-    biomarker_score: f64,
+    pub biomarker_id: String,
+    pub biomarker_score: f64,
 }
