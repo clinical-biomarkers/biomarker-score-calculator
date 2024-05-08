@@ -64,8 +64,8 @@ fn get_user_weights() -> Weights {
     println!("Other PMID (default = {}):", weights.other_pmid);
     weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
 
-    println!("PMID Limit (default = {}):", weights.other_pmid);
-    weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
+    println!("PMID Limit (default = {}):", weights.pmid_limit);
+    weights.pmid_limit = read_input().unwrap_or(weights.pmid_limit);
 
     println!("First source (default = {}):", weights.first_source);
     weights.first_source = read_input().unwrap_or(weights.first_source);
