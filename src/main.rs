@@ -1,7 +1,9 @@
 use glob::glob;
 use models::{Biomarker, BiomarkerScore};
-use serde::Serialize;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 use std::{fs, io, process};
 
 pub mod models;
@@ -11,6 +13,8 @@ fn main() {
     let mut score_map = HashMap::new();
     let weights = get_user_weights();
 
+    let start_time = Instant::now();
+
     for file in glob(glob_pattern).expect("Failed to read glob pattern.") {
         match file {
             Ok(path) => {
@@ -19,7 +23,11 @@ fn main() {
                     serde_json::from_str(&contents).expect("Error parsing JSON.");
                 for biomarker in biomarkers {
                     let score = calculate_score(&biomarker, &weights);
-                    score_map.insert(biomarker.biomarker_id, score);
+                    let biomarker_score = BiomarkerScore {
+                        biomarker_id: biomarker.biomarker_id.clone(),
+                        biomarker_score: score,
+                    };
+                    score_map.insert(biomarker.biomarker_id, biomarker_score);
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -29,10 +37,18 @@ fn main() {
         println!("Unexpected error, no scores were computed. Check JSON data and glob pattern.");
         process::exit(1);
     }
-    println!("Scores computed for {} biomarkers.", score_map.len());
+    let duration = start_time.elapsed();
+    println!(
+        "Scores computed for {} biomarkers. Took {:?} seconds.",
+        score_map.len(),
+        duration.as_secs_f64()
+    );
 
     let output_file = "score_outputs.json";
     let biomarker_scores: Vec<_> = score_map.values().collect();
+    let serialized_data =
+        serde_json::to_string_pretty(&biomarker_scores).expect("Error serializing output data.");
+    fs::write(output_file, serialized_data).expect("Error writing to output file.");
 }
 
 fn get_user_weights() -> Weights {
@@ -46,6 +62,9 @@ fn get_user_weights() -> Weights {
     weights.first_pmid = read_input().unwrap_or(weights.first_pmid);
 
     println!("Other PMID (default = {}):", weights.other_pmid);
+    weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
+
+    println!("PMID Limit (default = {}):", weights.other_pmid);
     weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
 
     println!("First source (default = {}):", weights.first_source);
@@ -79,6 +98,7 @@ struct Weights {
     pub clinical_use: i32,
     pub first_pmid: i32,
     pub other_pmid: f64,
+    pub pmid_limit: usize,
     pub first_source: i32,
     pub other_source: f64,
     pub loinc: i32,
@@ -92,6 +112,7 @@ impl Default for Weights {
             clinical_use: 5,
             first_pmid: 1,
             other_pmid: 0.2,
+            pmid_limit: 10,
             first_source: 1,
             other_source: 0.1,
             loinc: 1,
@@ -111,7 +132,7 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
             if unique_pmids.insert(&evidence.id) {
                 if unique_pmids.len() == 1 {
                     score += weights.first_pmid as f64;
-                } else if unique_pmids.len() <= 10 {
+                } else if unique_pmids.len() < weights.pmid_limit {
                     score += weights.other_pmid;
                 }
             }
@@ -131,7 +152,7 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
                 if unique_pmids.insert(&evidence.id) {
                     if unique_pmids.len() == 1 {
                         score += weights.first_pmid as f64;
-                    } else if unique_pmids.len() <= 10 {
+                    } else if unique_pmids.len() < weights.pmid_limit {
                         score += weights.other_pmid;
                     }
                 }
@@ -151,5 +172,9 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         score = 0.0
     }
 
-    score
+    Decimal::from_f64_retain(score)
+        .unwrap()
+        .round_dp(2)
+        .to_f64()
+        .unwrap()
 }
