@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 
 #[derive(Deserialize, Debug)]
 pub struct Biomarker {
@@ -34,4 +35,18 @@ pub struct Specimen {
 pub struct BiomarkerScore {
     pub biomarker_id: String,
     pub biomarker_score: f64,
+}
+
+impl PartialEq for BiomarkerScore {
+    fn eq(&self, other: &Self) -> bool {
+        self.biomarker_id == other.biomarker_id
+    }
+}
+
+impl Eq for BiomarkerScore {}
+
+impl Hash for BiomarkerScore {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.biomarker_id.hash(state);
+    }
 }

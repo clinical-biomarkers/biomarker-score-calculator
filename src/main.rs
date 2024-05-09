@@ -2,7 +2,7 @@ use glob::glob;
 use models::{Biomarker, BiomarkerScore};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::time::Instant;
 use std::{fs, io, process};
 
@@ -10,7 +10,7 @@ pub mod models;
 
 fn main() {
     let glob_pattern = "./src/data/*.json";
-    let mut score_map = HashMap::new();
+    let mut score_map = HashSet::new();
     let weights = get_user_weights();
 
     let start_time = Instant::now();
@@ -24,10 +24,10 @@ fn main() {
                 for biomarker in biomarkers {
                     let score = calculate_score(&biomarker, &weights);
                     let biomarker_score = BiomarkerScore {
-                        biomarker_id: biomarker.biomarker_id.clone(),
+                        biomarker_id: biomarker.biomarker_id,
                         biomarker_score: score,
                     };
-                    score_map.insert(biomarker.biomarker_id, biomarker_score);
+                    score_map.insert(biomarker_score);
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -45,7 +45,7 @@ fn main() {
     );
 
     let output_file = "score_outputs.json";
-    let biomarker_scores: Vec<_> = score_map.values().collect();
+    let biomarker_scores: Vec<_> = score_map.iter().collect();
     let serialized_data =
         serde_json::to_string_pretty(&biomarker_scores).expect("Error serializing output data.");
     fs::write(output_file, serialized_data).expect("Error writing to output file.");
@@ -127,23 +127,39 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
     let mut unique_pmids = HashSet::new();
     let mut unique_sources = HashSet::new();
 
-    // handle top level evidence sources
-    for evidence in &biomarker.evidence_source {
-        if evidence.database.to_lowercase() == "pubmed" {
-            if unique_pmids.insert(&evidence.id) {
-                if unique_pmids.len() == 1 {
-                    score += weights.first_pmid as f64;
-                } else if unique_pmids.len() < weights.pmid_limit {
-                    score += weights.other_pmid;
-                }
-            }
+    // chain the evidence iterators together for reduced redundancy
+    let all_evidence = biomarker.evidence_source.iter().chain(
+        biomarker
+            .biomarker_component
+            .iter()
+            .flat_map(|component| component.evidence_source.iter()),
+    );
+
+    for evidence in all_evidence {
+        let is_pubmed = evidence.database.to_lowercase().trim() == "pubmed";
+        let unique_set = if is_pubmed {
+            &mut unique_pmids
         } else {
-            if unique_sources.insert(&evidence.id) {
-                if unique_sources.len() == 1 {
-                    score += weights.first_source as f64;
-                } else {
-                    score += weights.other_source;
+            &mut unique_sources
+        };
+
+        if unique_set.insert(&evidence.id) {
+            score += match unique_set.len() {
+                1 => {
+                    if is_pubmed {
+                        weights.first_pmid as f64
+                    } else {
+                        weights.first_source as f64
+                    }
                 }
+                _ if unique_set.len() < weights.pmid_limit => {
+                    if is_pubmed {
+                        weights.other_pmid
+                    } else {
+                        weights.other_source
+                    }
+                }
+                _ => 0.0,
             }
         }
     }
@@ -153,41 +169,18 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         score += weights.generic_condition_pen as f64;
     }
 
-    // handle biomarker component scoring criteria
-    for component in &biomarker.biomarker_component {
-        // handle component evidence sources
-        for evidence in &component.evidence_source {
-            if evidence.database.to_lowercase() == "pubmed" {
-                if unique_pmids.insert(&evidence.id) {
-                    if unique_pmids.len() == 1 {
-                        score += weights.first_pmid as f64;
-                    } else if unique_pmids.len() < weights.pmid_limit {
-                        score += weights.other_pmid;
-                    }
-                }
-            } else {
-                if unique_sources.insert(&evidence.id) {
-                    if unique_sources.len() == 1 {
-                        score += weights.first_source as f64;
-                    } else {
-                        score += weights.other_source;
-                    }
-                }
-            }
-        }
-        // handle loinc code
-        for specimen in &component.specimen {
-            if !specimen.loinc_code.is_empty() {
-                score += weights.loinc as f64;
-                break;
-            }
-        }
+    // handle loinc scoring criteria
+    if biomarker.biomarker_component.iter().any(|component| {
+        component
+            .specimen
+            .iter()
+            .any(|specimen| !specimen.loinc_code.is_empty())
+    }) {
+        score += weights.loinc as f64;
     }
 
     // round negative score back up to zero
-    if score < 0.0 {
-        score = 0.0
-    }
+    score = score.max(0.0);
 
     Decimal::from_f64_retain(score)
         .unwrap()
