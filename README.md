@@ -10,14 +10,14 @@ The scoring algorithm and default weights are as follows:
 
 The available parameters are: 
 
-- Clinical Use: The score if a biomarker is already in use in a clinical application (default 5).
-- First PMID: The score for if the biomarker has at least one PubMed paper associated with its evidence (default 1).
-- Other PMID: The score for every additional PubMed paper (default 0.2).
-- PMID Limit: The cap on PubMed papers (default 10). 
-- First Source: The score for the first non-PubMed evidence source (default 1).
-- Other Source: The score for additional sources (default 0.2).
-- Loinc: The score for a Loinc code associated with the biomarker (default 1).
-- Generic Condition Penalty: The score penalty for biomarkers with non-specific conditions such as generic Cancer. (default -4).
+- `Clinical Use`: The score if a biomarker is already in use in a clinical application (default 5).
+- `First PMID`: The score for if the biomarker has at least one PubMed paper associated with its evidence (default 1).
+- `Other PMID`: The score for every additional PubMed paper (default 0.2).
+- `PMID Limit`: The cap on PubMed papers (default 10). 
+- `First Source`: The score for the first non-PubMed evidence source (default 1).
+- `Other Source`: The score for additional sources (default 0.2).
+- `Loinc`: The score for a Loinc code associated with the biomarker (default 1).
+- `Generic Condition Penalty`: The score penalty for biomarkers with non-specific conditions such as generic Cancer. (default -4).
 
 ## Usage
 
