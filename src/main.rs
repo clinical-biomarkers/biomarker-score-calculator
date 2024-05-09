@@ -2,7 +2,7 @@ use glob::glob;
 use models::{Biomarker, BiomarkerScore};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::time::Instant;
 use std::{fs, io, process};
 
@@ -10,7 +10,7 @@ pub mod models;
 
 fn main() {
     let glob_pattern = "./src/data/*.json";
-    let mut score_map = HashMap::new();
+    let mut score_map = HashSet::new();
     let weights = get_user_weights();
 
     let start_time = Instant::now();
@@ -24,10 +24,10 @@ fn main() {
                 for biomarker in biomarkers {
                     let score = calculate_score(&biomarker, &weights);
                     let biomarker_score = BiomarkerScore {
-                        biomarker_id: biomarker.biomarker_id.clone(),
+                        biomarker_id: biomarker.biomarker_id,
                         biomarker_score: score,
                     };
-                    score_map.insert(biomarker.biomarker_id, biomarker_score);
+                    score_map.insert(biomarker_score);
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -45,7 +45,7 @@ fn main() {
     );
 
     let output_file = "score_outputs.json";
-    let biomarker_scores: Vec<_> = score_map.values().collect();
+    let biomarker_scores: Vec<_> = score_map.iter().collect();
     let serialized_data =
         serde_json::to_string_pretty(&biomarker_scores).expect("Error serializing output data.");
     fs::write(output_file, serialized_data).expect("Error writing to output file.");
@@ -185,9 +185,7 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
     }
 
     // round negative score back up to zero
-    if score < 0.0 {
-        score = 0.0
-    }
+    score = score.max(0.0);
 
     Decimal::from_f64_retain(score)
         .unwrap()
