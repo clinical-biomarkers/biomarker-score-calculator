@@ -17,9 +17,8 @@ The available parameters are:
 - First Source: The score for the first non-PubMed evidence source (default 1).
 - Other Source: The score for additional sources (default 0.2).
 - Loinc: The score for a Loinc code associated with the biomarker (default 1).
-- Generic Condition Penalty: The score penalty for biomarkers with non-specific scores (default -4).
-- Generic Conditions: The set of generic scores to penalize (default [DOID:162]).
+- Generic Condition Penalty: The score penalty for biomarkers with non-specific conditions such as generic Cancer. (default -4).
 
 ## Usage
 
-The tool will look for data files in a directory called `data/`. Once run, you will have the choice to overwrite the default weights or use the defaults. A result file named `score_outputs.json` will be created with the calculated score for each biomarker in the `data/` directory.
+The tool will look for data files with a glob pattern of `src/data/*.json` by default, however, the glob pattern can be overwritten by passing in a command-line argument with a glob pattern that will find the JSON data files. Once run, you will have the choice to overwrite the default weights or use the defaults. A result file named `score_outputs.json` will be created with the calculated score for each biomarker file found from the glob pattern.
