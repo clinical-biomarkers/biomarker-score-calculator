@@ -127,23 +127,39 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
     let mut unique_pmids = HashSet::new();
     let mut unique_sources = HashSet::new();
 
-    // handle top level evidence sources
-    for evidence in &biomarker.evidence_source {
-        if evidence.database.to_lowercase() == "pubmed" {
-            if unique_pmids.insert(&evidence.id) {
-                if unique_pmids.len() == 1 {
-                    score += weights.first_pmid as f64;
-                } else if unique_pmids.len() < weights.pmid_limit {
-                    score += weights.other_pmid;
-                }
-            }
+    // chain the evidence iterators together for reduced redundancy
+    let all_evidence = biomarker.evidence_source.iter().chain(
+        biomarker
+            .biomarker_component
+            .iter()
+            .flat_map(|component| component.evidence_source.iter()),
+    );
+
+    for evidence in all_evidence {
+        let is_pubmed = evidence.database.to_lowercase().trim() == "pubmed";
+        let unique_set = if is_pubmed {
+            &mut unique_pmids
         } else {
-            if unique_sources.insert(&evidence.id) {
-                if unique_sources.len() == 1 {
-                    score += weights.first_source as f64;
-                } else {
-                    score += weights.other_source;
+            &mut unique_sources
+        };
+
+        if unique_set.insert(&evidence.id) {
+            score += match unique_set.len() {
+                1 => {
+                    if is_pubmed {
+                        weights.first_pmid as f64
+                    } else {
+                        weights.first_source as f64
+                    }
                 }
+                _ if unique_set.len() < weights.pmid_limit => {
+                    if is_pubmed {
+                        weights.other_pmid
+                    } else {
+                        weights.other_source
+                    }
+                }
+                _ => 0.0,
             }
         }
     }
@@ -153,35 +169,14 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         score += weights.generic_condition_pen as f64;
     }
 
-    // handle biomarker component scoring criteria
-    for component in &biomarker.biomarker_component {
-        // handle component evidence sources
-        for evidence in &component.evidence_source {
-            if evidence.database.to_lowercase() == "pubmed" {
-                if unique_pmids.insert(&evidence.id) {
-                    if unique_pmids.len() == 1 {
-                        score += weights.first_pmid as f64;
-                    } else if unique_pmids.len() < weights.pmid_limit {
-                        score += weights.other_pmid;
-                    }
-                }
-            } else {
-                if unique_sources.insert(&evidence.id) {
-                    if unique_sources.len() == 1 {
-                        score += weights.first_source as f64;
-                    } else {
-                        score += weights.other_source;
-                    }
-                }
-            }
-        }
-        // handle loinc code
-        for specimen in &component.specimen {
-            if !specimen.loinc_code.is_empty() {
-                score += weights.loinc as f64;
-                break;
-            }
-        }
+    // handle loinc scoring criteria
+    if biomarker.biomarker_component.iter().any(|component| {
+        component
+            .specimen
+            .iter()
+            .any(|specimen| !specimen.loinc_code.is_empty())
+    }) {
+        score += weights.loinc as f64;
     }
 
     // round negative score back up to zero
