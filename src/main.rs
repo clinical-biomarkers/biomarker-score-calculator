@@ -3,8 +3,9 @@ use models::{Biomarker, BiomarkerScore};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::collections::{HashMap, HashSet};
+use std::io::{self, BufReader, BufWriter};
 use std::time::Instant;
-use std::{fs, io, process};
+use std::{fs::File, process};
 
 pub mod models;
 
@@ -12,22 +13,28 @@ fn main() {
     let glob_pattern = "./src/data/*.json";
     let mut score_map = HashMap::new();
     let weights = get_user_weights();
-
     let start_time = Instant::now();
 
-    for file in glob(glob_pattern).expect("Failed to read glob pattern.") {
-        match file {
+    for entry in glob(glob_pattern).expect("Failed to read glob pattern.") {
+        println!("On file: {:?}", entry.as_ref().unwrap().to_str().unwrap());
+        match entry {
             Ok(path) => {
-                let contents = fs::read_to_string(path).expect("Could not read file.");
-                let biomarkers: Vec<Biomarker> =
-                    serde_json::from_str(&contents).expect("Error parsing JSON.");
+                let file = File::open(&path).unwrap_or_else(|_| {
+                    panic!("Failed to open file: {:?}", path.to_str().unwrap())
+                });
+                let reader = BufReader::new(file);
+                let biomarkers: Vec<Biomarker> = serde_json::from_reader(reader)
+                    .expect("Error parsing JSON into Vec<Biomarker>.");
+
                 for biomarker in biomarkers {
                     let score = calculate_score(&biomarker, &weights);
-                    let biomarker_score = BiomarkerScore {
-                        biomarker_id: biomarker.biomarker_id.clone(),
-                        biomarker_score: score,
-                    };
-                    score_map.insert(biomarker.biomarker_id, biomarker_score);
+                    score_map.insert(
+                        biomarker.biomarker_id.clone(),
+                        BiomarkerScore {
+                            biomarker_id: biomarker.biomarker_id,
+                            biomarker_score: score,
+                        },
+                    );
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -44,11 +51,10 @@ fn main() {
         duration.as_secs_f64()
     );
 
-    let output_file = "score_outputs.json";
-    let biomarker_scores: Vec<_> = score_map.values().collect();
-    let serialized_data =
-        serde_json::to_string_pretty(&biomarker_scores).expect("Error serializing output data.");
-    fs::write(output_file, serialized_data).expect("Error writing to output file.");
+    let output_file = File::create("score_outputs.json").expect("Error creating output file.");
+    let writer = BufWriter::new(output_file);
+    serde_json::to_writer_pretty(writer, &score_map.values().collect::<Vec<_>>())
+        .expect("Error serializing output data.");
 }
 
 fn get_user_weights() -> Weights {
@@ -160,9 +166,11 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         }
         // handle loinc code
         for specimen in &component.specimen {
-            if !specimen.loinc_code.is_empty() {
-                score += weights.loinc as f64;
-                break;
+            if let Some(ref code) = specimen.loinc_code {
+                if !code.is_empty() {
+                    score += weights.loinc as f64;
+                    break;
+                }
             }
         }
     }

@@ -27,7 +27,7 @@ pub struct Evidence {
 
 #[derive(Deserialize, Debug)]
 pub struct Specimen {
-    pub loinc_code: String,
+    pub loinc_code: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
