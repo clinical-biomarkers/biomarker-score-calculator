@@ -3,19 +3,21 @@ use models::{Biomarker, BiomarkerScore};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::collections::HashSet;
+use std::env;
 use std::time::Instant;
 use std::{fs, io, process};
 
 pub mod models;
 
 fn main() {
-    let glob_pattern = "./src/data/*.json";
+    let args: Vec<String> = env::args().collect();
+    let glob_pattern = args.get(1).unwrap_or(&"./src/data/*.json".to_string()).clone();
     let mut score_map = HashSet::new();
     let weights = get_user_weights();
 
     let start_time = Instant::now();
 
-    for file in glob(glob_pattern).expect("Failed to read glob pattern.") {
+    for file in glob(&glob_pattern).expect("Failed to read glob pattern.") {
         match file {
             Ok(path) => {
                 let contents = fs::read_to_string(path).expect("Could not read file.");
