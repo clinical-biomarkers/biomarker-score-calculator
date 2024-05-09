@@ -125,6 +125,7 @@ impl Default for Weights {
 fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
     let mut score = 0.0;
     let mut unique_pmids = HashSet::new();
+    let mut unique_sources = HashSet::new();
 
     // handle top level evidence sources
     for evidence in &biomarker.evidence_source {
@@ -134,6 +135,14 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
                     score += weights.first_pmid as f64;
                 } else if unique_pmids.len() < weights.pmid_limit {
                     score += weights.other_pmid;
+                }
+            }
+        } else {
+            if unique_sources.insert(&evidence.id) {
+                if unique_sources.len() == 1 {
+                    score += weights.first_source as f64;
+                } else {
+                    score += weights.other_source;
                 }
             }
         }
@@ -154,6 +163,14 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
                         score += weights.first_pmid as f64;
                     } else if unique_pmids.len() < weights.pmid_limit {
                         score += weights.other_pmid;
+                    }
+                }
+            } else {
+                if unique_sources.insert(&evidence.id) {
+                    if unique_sources.len() == 1 {
+                        score += weights.first_source as f64;
+                    } else {
+                        score += weights.other_source;
                     }
                 }
             }
