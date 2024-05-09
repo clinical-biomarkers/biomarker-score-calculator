@@ -144,22 +144,22 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         };
 
         if unique_set.insert(&evidence.id) {
-            score += match unique_set.len() {
-                1 => {
-                    if is_pubmed {
-                        weights.first_pmid as f64
-                    } else {
-                        weights.first_source as f64
-                    }
+            score += if unique_set.len() == 1 {
+                if is_pubmed {
+                    weights.first_pmid as f64
+                } else {
+                    weights.first_source as f64
                 }
-                _ if unique_set.len() < weights.pmid_limit => {
-                    if is_pubmed {
+            } else {
+                if is_pubmed {
+                    if unique_pmids.len() <= weights.pmid_limit {
                         weights.other_pmid
                     } else {
-                        weights.other_source
+                        0.0
                     }
+                } else {
+                    weights.other_source
                 }
-                _ => 0.0,
             }
         }
     }
