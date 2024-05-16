@@ -1,8 +1,8 @@
 use glob::glob;
-use models::{Biomarker, BiomarkerScore};
+use models::Biomarker;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::env;
 use std::time::Instant;
 use std::{fs, io, process};
@@ -15,7 +15,7 @@ fn main() {
         .get(1)
         .unwrap_or(&"./src/data/*.json".to_string())
         .clone();
-    let mut score_map = HashSet::new();
+    let mut score_map: HashMap<String, HashMap<String, f64>> = HashMap::new();
     let weights = get_user_weights();
 
     let start_time = Instant::now();
@@ -23,16 +23,14 @@ fn main() {
     for file in glob(&glob_pattern).expect("Failed to read glob pattern.") {
         match file {
             Ok(path) => {
+                let filename = path.file_name().unwrap().to_string_lossy().into_owned();
                 let contents = fs::read_to_string(path).expect("Could not read file.");
                 let biomarkers: Vec<Biomarker> =
                     serde_json::from_str(&contents).expect("Error parsing JSON.");
+                let file_scores = score_map.entry(filename).or_insert_with(HashMap::new);
                 for biomarker in biomarkers {
                     let score = calculate_score(&biomarker, &weights);
-                    let biomarker_score = BiomarkerScore {
-                        biomarker_id: biomarker.biomarker_id,
-                        biomarker_score: score,
-                    };
-                    score_map.insert(biomarker_score);
+                    file_scores.insert(biomarker.biomarker_id.clone(), score);
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -44,15 +42,14 @@ fn main() {
     }
     let duration = start_time.elapsed();
     println!(
-        "Scores computed for {} biomarkers. Took {:?} seconds.",
+        "Scores computed for {} files. Took {:?} seconds.",
         score_map.len(),
         duration.as_secs_f64()
     );
 
     let output_file = "score_outputs.json";
-    let biomarker_scores: Vec<_> = score_map.iter().collect();
     let serialized_data =
-        serde_json::to_string_pretty(&biomarker_scores).expect("Error serializing output data.");
+        serde_json::to_string_pretty(&score_map).expect("Error serializing output data.");
     fs::write(output_file, serialized_data).expect("Error writing to output file.");
 }
 
