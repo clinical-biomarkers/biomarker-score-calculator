@@ -1,11 +1,11 @@
 use glob::glob;
-use models::Biomarker;
+use models::{get_user_weights, Biomarker, BiomarkerScore, ScoreContribution, ScoreInfo, Weights};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::time::Instant;
-use std::{fs, io, process};
+use std::{fs, process};
 
 pub mod models;
 
@@ -15,7 +15,7 @@ fn main() {
         .get(1)
         .unwrap_or(&"./src/data/*.json".to_string())
         .clone();
-    let mut score_map: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    let mut score_map: HashMap<String, HashMap<String, BiomarkerScore>> = HashMap::new();
     let weights = get_user_weights();
 
     let start_time = Instant::now();
@@ -29,8 +29,11 @@ fn main() {
                     serde_json::from_str(&contents).expect("Error parsing JSON.");
                 let file_scores = score_map.entry(filename).or_insert_with(HashMap::new);
                 for biomarker in biomarkers {
-                    let score = calculate_score(&biomarker, &weights);
-                    file_scores.insert(biomarker.biomarker_id.clone(), score);
+                    let (score, score_info) = calculate_score(&biomarker, &weights);
+                    file_scores.insert(
+                        biomarker.biomarker_id.clone(),
+                        BiomarkerScore { score, score_info },
+                    );
                 }
             }
             Err(e) => println!("Error processing file: {:?}", e),
@@ -53,81 +56,11 @@ fn main() {
     fs::write(output_file, serialized_data).expect("Error writing to output file.");
 }
 
-fn get_user_weights() -> Weights {
-    let mut weights = Weights::default();
-    println!("Enter weight/configuration override or press Enter to use default value:");
-
-    println!("Clinical use (default = {}):", weights.clinical_use);
-    weights.clinical_use = read_input().unwrap_or(weights.clinical_use);
-
-    println!("First PMID (default = {}):", weights.first_pmid);
-    weights.first_pmid = read_input().unwrap_or(weights.first_pmid);
-
-    println!("Other PMID (default = {}):", weights.other_pmid);
-    weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
-
-    println!("PMID Limit (default = {}):", weights.pmid_limit);
-    weights.pmid_limit = read_input().unwrap_or(weights.pmid_limit);
-
-    println!("First source (default = {}):", weights.first_source);
-    weights.first_source = read_input().unwrap_or(weights.first_source);
-
-    println!("Other source (default = {}):", weights.other_source);
-    weights.other_source = read_input().unwrap_or(weights.other_source);
-
-    println!("Loinc (default = {}):", weights.loinc);
-    weights.loinc = read_input().unwrap_or(weights.loinc);
-
-    println!(
-        "Generic condition penalty (default = {}):",
-        weights.generic_condition_pen
-    );
-    weights.generic_condition_pen = read_input().unwrap_or(weights.generic_condition_pen);
-
-    weights
-}
-
-fn read_input<T: std::str::FromStr>() -> Option<T> {
-    let mut input = String::new();
-    if io::stdin().read_line(&mut input).is_ok() {
-        input.trim().parse().ok()
-    } else {
-        None
-    }
-}
-
-struct Weights {
-    pub clinical_use: i32,
-    pub first_pmid: i32,
-    pub other_pmid: f64,
-    pub pmid_limit: usize,
-    pub first_source: i32,
-    pub other_source: f64,
-    pub loinc: i32,
-    pub generic_condition_pen: i32,
-    pub generic_conditions: HashSet<String>,
-}
-
-impl Default for Weights {
-    fn default() -> Self {
-        Self {
-            clinical_use: 5,
-            first_pmid: 1,
-            other_pmid: 0.2,
-            pmid_limit: 10,
-            first_source: 1,
-            other_source: 0.1,
-            loinc: 1,
-            generic_condition_pen: -4,
-            generic_conditions: ["DOID:162".to_string()].into_iter().collect(),
-        }
-    }
-}
-
-fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
+fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> (f64, ScoreInfo) {
     let mut score = 0.0;
     let mut unique_pmids = HashSet::new();
     let mut unique_sources = HashSet::new();
+    let mut contributions = Vec::new();
 
     // chain the evidence iterators together for reduced redundancy
     let all_evidence = biomarker.evidence_source.iter().chain(
@@ -136,6 +69,11 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
             .iter()
             .flat_map(|component| component.evidence_source.iter()),
     );
+
+    let mut first_pmid_count = 0;
+    let mut other_pmid_count = 0;
+    let mut first_source_count = 0;
+    let mut other_source_count = 0;
 
     for evidence in all_evidence {
         let is_pubmed = evidence.database.to_lowercase().trim() == "pubmed";
@@ -146,32 +84,61 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
         };
 
         if unique_set.insert(&evidence.id) {
-            score += if unique_set.len() == 1 {
-                if is_pubmed {
-                    weights.first_pmid as f64
-                } else {
-                    weights.first_source as f64
+            if is_pubmed {
+                if unique_pmids.len() == 1 {
+                    score += weights.first_pmid as f64;
+                    first_pmid_count += 1;
+                } else if unique_pmids.len() <= weights.pmid_limit {
+                    score += weights.other_pmid;
+                    other_pmid_count += 1;
                 }
             } else {
-                if is_pubmed {
-                    if unique_pmids.len() <= weights.pmid_limit {
-                        weights.other_pmid
-                    } else {
-                        0.0
-                    }
+                if unique_sources.len() == 1 {
+                    score += weights.first_source as f64;
+                    first_source_count += 1;
                 } else {
-                    weights.other_source
+                    score += weights.other_source;
+                    other_source_count += 1;
                 }
             }
         }
     }
 
+    contributions.push(ScoreContribution {
+        c: "first_pmid".to_string(),
+        w: weights.first_pmid as f64,
+        f: first_pmid_count as f64,
+    });
+    contributions.push(ScoreContribution {
+        c: "other_pmid".to_string(),
+        w: weights.other_pmid,
+        f: other_pmid_count as f64,
+    });
+    contributions.push(ScoreContribution {
+        c: "first_source".to_string(),
+        w: weights.first_source as f64,
+        f: first_source_count as f64,
+    });
+    contributions.push(ScoreContribution {
+        c: "other_source".to_string(),
+        w: weights.other_source,
+        f: other_source_count as f64,
+    });
+
     // check for generic condition penalty
+    let mut generic_condition_count = 0;
     if weights.generic_conditions.contains(&biomarker.condition.id) {
         score += weights.generic_condition_pen as f64;
+        generic_condition_count += 1;
     }
+    contributions.push(ScoreContribution {
+        c: "generic_condition_pen".to_string(),
+        w: weights.generic_condition_pen as f64,
+        f: generic_condition_count as f64,
+    });
 
     // handle loinc scoring criteria
+    let mut loinc_count = 0;
     if biomarker.biomarker_component.iter().any(|component| {
         component
             .specimen
@@ -179,14 +146,35 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> f64 {
             .any(|specimen| !specimen.loinc_code.is_empty())
     }) {
         score += weights.loinc as f64;
+        loinc_count += 1;
     }
+    contributions.push(ScoreContribution {
+        c: "loinc".to_string(),
+        w: weights.loinc as f64,
+        f: loinc_count as f64,
+    });
 
     // round negative score back up to zero
     score = score.max(0.0);
 
-    Decimal::from_f64_retain(score)
+    let score = Decimal::from_f64_retain(score)
         .unwrap()
         .round_dp(2)
         .to_f64()
-        .unwrap()
+        .unwrap();
+
+    let score_info = ScoreInfo {
+        contributions,
+        formula: "sum(w*f)".to_string(),
+        variables: [
+            ("c".to_string(), "condition".to_string()),
+            ("w".to_string(), "weight".to_string()),
+            ("f".to_string(), "frequency".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect(),
+    };
+
+    (score, score_info)
 }
