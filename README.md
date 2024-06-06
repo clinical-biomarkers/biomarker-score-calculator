@@ -15,7 +15,7 @@ The available parameters are:
 - `Other PMID`: The score for every additional PubMed paper (default 0.2).
 - `PMID Limit`: The cap on PubMed papers (default 10). 
 - `First Source`: The score for the first non-PubMed evidence source (default 1).
-- `Other Source`: The score for additional sources (default 0.2).
+- `Other Source`: The score for additional sources (default 0.1).
 - `Loinc`: The score for a Loinc code associated with the biomarker (default 1).
 - `Generic Condition Penalty`: The score penalty for biomarkers with non-specific conditions such as generic Cancer. (default -4).
 
