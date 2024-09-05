@@ -1,4 +1,5 @@
 use clap::{Arg, Command};
+use defaults::*;
 use glob::glob;
 use models::{get_user_weights, Biomarker, BiomarkerScore, ScoreContribution, ScoreInfo, Weights};
 use rust_decimal::prelude::ToPrimitive;
@@ -7,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use std::{fs, process};
 
+pub mod defaults;
 pub mod models;
 
 fn main() {
@@ -21,12 +23,20 @@ fn main() {
                 .help("Glob pattern for input files (e.g. `./data/*.json`)")
                 .default_value("./data/*.json"),
         )
+        .arg(
+            Arg::new("overrides")
+                .short('o')
+                .long("overrides")
+                .value_name("FILE")
+                .help("Optional JSON file for overriding scoring weights and other scoring conditions"),
+        )
         .get_matches();
 
     let glob_pattern = args.get_one::<String>("data").unwrap();
+    let overrides_file_path = args.get_one::<String>("overrides");
+    let weights = get_user_weights(overrides_file_path);
 
     let mut score_map: HashMap<String, HashMap<String, BiomarkerScore>> = HashMap::new();
-    let weights = get_user_weights();
 
     let start_time = Instant::now();
 
@@ -96,18 +106,18 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> (f64, ScoreInfo)
         if unique_set.insert(&evidence.id) {
             if is_pubmed {
                 if unique_pmids.len() == 1 {
-                    score += weights.first_pmid as f64;
+                    score += weights.first_pmid.unwrap_or(FIRST_PMID) as f64;
                     first_pmid_count += 1;
-                } else if unique_pmids.len() <= weights.pmid_limit {
-                    score += weights.other_pmid;
+                } else if unique_pmids.len() <= weights.pmid_limit.unwrap_or(PMID_LIMIT) {
+                    score += weights.other_pmid.unwrap_or(OTHER_PMID);
                     other_pmid_count += 1;
                 }
             } else {
                 if unique_sources.len() == 1 {
-                    score += weights.first_source as f64;
+                    score += weights.first_source.unwrap_or(FIRST_SOURCE) as f64;
                     first_source_count += 1;
                 } else {
-                    score += weights.other_source;
+                    score += weights.other_source.unwrap_or(OTHER_SOURCE);
                     other_source_count += 1;
                 }
             }
@@ -116,34 +126,43 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> (f64, ScoreInfo)
 
     contributions.push(ScoreContribution {
         c: "first_pmid".to_string(),
-        w: weights.first_pmid as f64,
+        w: weights.first_pmid.unwrap_or(FIRST_PMID) as f64,
         f: first_pmid_count as f64,
     });
     contributions.push(ScoreContribution {
         c: "other_pmid".to_string(),
-        w: weights.other_pmid,
+        w: weights.other_pmid.unwrap_or(OTHER_PMID),
         f: other_pmid_count as f64,
     });
     contributions.push(ScoreContribution {
         c: "first_source".to_string(),
-        w: weights.first_source as f64,
+        w: weights.first_source.unwrap_or(FIRST_SOURCE) as f64,
         f: first_source_count as f64,
     });
     contributions.push(ScoreContribution {
         c: "other_source".to_string(),
-        w: weights.other_source,
+        w: weights.other_source.unwrap_or(OTHER_SOURCE),
         f: other_source_count as f64,
     });
 
     // check for generic condition penalty
     let mut generic_condition_count = 0;
-    if weights.generic_conditions.contains(&biomarker.condition.id) {
-        score += weights.generic_condition_pen as f64;
+    if weights
+        .generic_conditions
+        .clone()
+        .unwrap_or(GENERIC_CONDITIONS.iter().map(|&s| s.to_owned()).collect())
+        .contains(&biomarker.condition.id)
+    {
+        score += weights
+            .generic_condition_pen
+            .unwrap_or(GENERIC_CONDITION_PEN) as f64;
         generic_condition_count += 1;
     }
     contributions.push(ScoreContribution {
         c: "generic_condition_pen".to_string(),
-        w: weights.generic_condition_pen as f64,
+        w: weights
+            .generic_condition_pen
+            .unwrap_or(GENERIC_CONDITION_PEN) as f64,
         f: generic_condition_count as f64,
     });
 
@@ -155,12 +174,12 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> (f64, ScoreInfo)
             .iter()
             .any(|specimen| !specimen.loinc_code.is_empty())
     }) {
-        score += weights.loinc as f64;
+        score += weights.loinc.unwrap_or(LOINC) as f64;
         loinc_count += 1;
     }
     contributions.push(ScoreContribution {
         c: "loinc".to_string(),
-        w: weights.loinc as f64,
+        w: weights.loinc.unwrap_or(LOINC) as f64,
         f: loinc_count as f64,
     });
 
