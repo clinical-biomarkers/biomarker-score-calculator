@@ -1,20 +1,30 @@
+use clap::{Arg, Command};
 use glob::glob;
 use models::{get_user_weights, Biomarker, BiomarkerScore, ScoreContribution, ScoreInfo, Weights};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::time::Instant;
 use std::{fs, process};
 
 pub mod models;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let glob_pattern = args
-        .get(1)
-        .unwrap_or(&"./data/*.json".to_string())
-        .clone();
+    let args = Command::new("Biomarker Score Calculator")
+        .version("1.0.0")
+        .about("Calculates biomarker scores based on input data and weight overrides")
+        .arg(
+            Arg::new("data")
+                .short('d')
+                .long("data")
+                .value_name("PATTERN")
+                .help("Glob pattern for input files (e.g. `./data/*.json`)")
+                .default_value("./data/*.json"),
+        )
+        .get_matches();
+
+    let glob_pattern = args.get_one::<String>("data").unwrap();
+
     let mut score_map: HashMap<String, HashMap<String, BiomarkerScore>> = HashMap::new();
     let weights = get_user_weights();
 
