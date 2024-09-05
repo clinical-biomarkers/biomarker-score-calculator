@@ -37,17 +37,17 @@ jobs:
       - name: Rename binary
         run: |
           cd target/${{ matrix.platform.target }}/release
-          mv biomarker-score-calculator-${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }} biomarker-score-calculator--${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
+          mv biomarker-score-calculator${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }} biomarker-score-calculator-${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
       - name: Generate SHA256 checksum
         shell: bash
         run: |
           cd target/${{ matrix.platform.target }}/release
           if [[ "${{ matrix.platform.os }}" == "windows-latest" ]]; then
-            powershell -Command "(Get-FileHash biomarker-score-calculator--${{ matrix.platform.release_for }}.exe -Algorithm SHA256).Hash.ToLower() + '  biomarker-score-calculator--${{ matrix.platform.release_for }}.exe'" > biomarker-score-calculator--${{ matrix.platform.release_for }}.sha256
+            powershell -Command "(Get-FileHash biomarker-score-calculator-${{ matrix.platform.release_for }}.exe -Algorithm SHA256).Hash.ToLower() + '  biomarker-score-calculator-${{ matrix.platform.release_for }}.exe'" > biomarker-score-calculator-${{ matrix.platform.release_for }}.sha256
           elif [[ "${{ matrix.platform.os }}" == "macos-12" || "${{ matrix.platform.os }}" == "macos-latest" ]]; then
-            shasum -a 256 biomarker-score-calculator--${{ matrix.platform.release_for }} > biomarker-score-calculator--${{ matrix.platform.release_for }}.sha256
+            shasum -a 256 biomarker-score-calculator-${{ matrix.platform.release_for }} > biomarker-score-calculator-${{ matrix.platform.release_for }}.sha256
           else
-            sha256sum biomarker-score-calculator--${{ matrix.platform.release_for }} > biomarker-score-calculator--${{ matrix.platform.release_for }}.sha256
+            sha256sum biomarker-score-calculator-${{ matrix.platform.release_for }} > biomarker-score-calculator-${{ matrix.platform.release_for }}.sha256
           fi
       - name: Upload SHA256 checksum
         uses: actions/upload-release-asset@v1
@@ -55,8 +55,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/${{ matrix.platform.target }}/release/biomarker-score-calculator--${{ matrix.platform.release_for }}.sha256
-          asset_name: biomarker-score-calculator--${{ matrix.platform.release_for }}.sha256
+          asset_path: ./target/${{ matrix.platform.target }}/release/biomarker-score-calculator-${{ matrix.platform.release_for }}.sha256
+          asset_name: biomarker-score-calculator-${{ matrix.platform.release_for }}.sha256
           asset_content_type: text/plain
       - name: Upload Release Asset (Binary)
         uses: actions/upload-release-asset@v1
@@ -64,6 +64,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./target/${{ matrix.platform.target }}/release/biomarker-score-calculator--${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
-          asset_name: biomarker-score-calculator--${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
+          asset_path: ./target/${{ matrix.platform.target }}/release/biomarker-score-calculator-${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
+          asset_name: biomarker-score-calculator-${{ matrix.platform.release_for }}${{ matrix.platform.target == 'x86_64-pc-windows-msvc' && '.exe' || '' }}
           asset_content_type: application/octet-stream
