@@ -2,9 +2,9 @@
 
 The biomarker scoring system is meant for quick assessment of how much existing knowledge has already been collected for an entity. Although a default scoring is provided, we recognize that different users will have different use cases, and as a result, will have different views on how various parameters in the scoring should be weighted.
 
-The scoring algorithm and default weights are as follows:
-
-![Default Algorithm](./imgs/biomarker_scoring.png)
+- [Weights/Conditions](#weightsconditions)
+- [Usage](#usage)
+- [Installation](#installation)
 
 ## Weights/Conditions
 
@@ -20,11 +20,15 @@ The available parameters are:
 - `Generic Condition Penalty`: The score penalty for biomarkers with non-specific conditions such as generic Cancer. (default `-4`).
 - `Generic Conditions`: The conditions to apply the penalty to. (default `["DOID:162"]`)
 
+The scoring algorithm and default weights are as follows:
+
+![Default Algorithm](./imgs/biomarker_scoring.png)
+
 ## Usage
 
 The biomarker score calculators supports these command line arguments:
 
-```shell
+```
 Calculates biomarker scores based on input data and weight overrides
 
 Usage: biomarker-score-calculator [OPTIONS]
