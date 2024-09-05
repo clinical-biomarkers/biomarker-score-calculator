@@ -1,6 +1,7 @@
+use crate::defaults::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::io;
+use std::fs;
 
 #[derive(Deserialize, Debug)]
 pub struct Biomarker {
@@ -29,6 +30,7 @@ pub struct Evidence {
 
 #[derive(Deserialize, Debug)]
 pub struct Specimen {
+    pub id: String,
     pub loinc_code: String,
 }
 
@@ -52,73 +54,77 @@ pub struct BiomarkerScore {
     pub score_info: ScoreInfo,
 }
 
+#[derive(Deserialize)]
 pub struct Weights {
-    pub clinical_use: i32,
-    pub first_pmid: i32,
-    pub other_pmid: f64,
-    pub pmid_limit: usize,
-    pub first_source: i32,
-    pub other_source: f64,
-    pub loinc: i32,
-    pub generic_condition_pen: i32,
-    pub generic_conditions: HashSet<String>,
+    pub clinical_use: Option<i32>,
+    pub first_pmid: Option<i32>,
+    pub other_pmid: Option<f64>,
+    pub pmid_limit: Option<usize>,
+    pub first_source: Option<i32>,
+    pub other_source: Option<f64>,
+    pub loinc: Option<i32>,
+    pub generic_condition_pen: Option<i32>,
+    pub generic_conditions: Option<HashSet<String>>,
 }
 
 impl Default for Weights {
     fn default() -> Self {
         Self {
-            clinical_use: 5,
-            first_pmid: 1,
-            other_pmid: 0.2,
-            pmid_limit: 10,
-            first_source: 1,
-            other_source: 0.1,
-            loinc: 1,
-            generic_condition_pen: -4,
-            generic_conditions: ["DOID:162".to_string()].into_iter().collect(),
+            clinical_use: Some(CLINICAL_USE),
+            first_pmid: Some(FIRST_PMID),
+            other_pmid: Some(OTHER_PMID),
+            pmid_limit: Some(PMID_LIMIT),
+            first_source: Some(FIRST_SOURCE),
+            other_source: Some(OTHER_SOURCE),
+            loinc: Some(LOINC),
+            generic_condition_pen: Some(GENERIC_CONDITION_PEN),
+            generic_conditions: Some(GENERIC_CONDITIONS.iter().map(|&s| s.to_owned()).collect()),
         }
     }
 }
 
-pub fn get_user_weights() -> Weights {
-    let mut weights = Weights::default();
-    println!("Enter weight/configuration override or press Enter to use default value:");
+impl Weights {
+    // Merges the overrides with the default values
+    pub fn with_defaults(overrides: Option<&Weights>) -> Self {
+        let default_weights = Weights::default();
 
-    println!("Clinical use (default = {}):", weights.clinical_use);
-    weights.clinical_use = read_input().unwrap_or(weights.clinical_use);
-
-    println!("First PMID (default = {}):", weights.first_pmid);
-    weights.first_pmid = read_input().unwrap_or(weights.first_pmid);
-
-    println!("Other PMID (default = {}):", weights.other_pmid);
-    weights.other_pmid = read_input().unwrap_or(weights.other_pmid);
-
-    println!("PMID Limit (default = {}):", weights.pmid_limit);
-    weights.pmid_limit = read_input().unwrap_or(weights.pmid_limit);
-
-    println!("First source (default = {}):", weights.first_source);
-    weights.first_source = read_input().unwrap_or(weights.first_source);
-
-    println!("Other source (default = {}):", weights.other_source);
-    weights.other_source = read_input().unwrap_or(weights.other_source);
-
-    println!("Loinc (default = {}):", weights.loinc);
-    weights.loinc = read_input().unwrap_or(weights.loinc);
-
-    println!(
-        "Generic condition penalty (default = {}):",
-        weights.generic_condition_pen
-    );
-    weights.generic_condition_pen = read_input().unwrap_or(weights.generic_condition_pen);
-
-    weights
+        Weights {
+            clinical_use: overrides
+                .and_then(|w| w.clinical_use)
+                .or(default_weights.clinical_use),
+            first_pmid: overrides
+                .and_then(|w| w.first_pmid)
+                .or(default_weights.first_pmid),
+            other_pmid: overrides
+                .and_then(|w| w.other_pmid)
+                .or(default_weights.other_pmid),
+            pmid_limit: overrides
+                .and_then(|w| w.pmid_limit)
+                .or(default_weights.pmid_limit),
+            first_source: overrides
+                .and_then(|w| w.first_source)
+                .or(default_weights.first_source),
+            other_source: overrides
+                .and_then(|w| w.other_source)
+                .or(default_weights.other_source),
+            loinc: overrides.and_then(|w| w.loinc).or(default_weights.loinc),
+            generic_condition_pen: overrides
+                .and_then(|w| w.generic_condition_pen)
+                .or(default_weights.generic_condition_pen),
+            generic_conditions: overrides
+                .and_then(|w| w.generic_conditions.clone())
+                .or(default_weights.generic_conditions),
+        }
+    }
 }
 
-fn read_input<T: std::str::FromStr>() -> Option<T> {
-    let mut input = String::new();
-    if io::stdin().read_line(&mut input).is_ok() {
-        input.trim().parse().ok()
+pub fn get_user_weights(overrides_file: Option<&String>) -> Weights {
+    if let Some(path) = overrides_file {
+        let file_contents = fs::read_to_string(path).expect("Could not read overrides file.");
+        let overrides =
+            serde_json::from_str(&file_contents).expect("Error parsing overrides file.");
+        Weights::with_defaults(Some(&overrides))
     } else {
-        None
+        Weights::with_defaults(None)
     }
 }
