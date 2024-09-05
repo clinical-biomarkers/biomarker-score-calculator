@@ -155,7 +155,8 @@ fn calculate_score(biomarker: &Biomarker, weights: &Weights) -> (f64, ScoreInfo)
     });
 
     // round negative score back up to zero
-    score = score.max(0.0);
+    // now support negative scores
+    // score = score.max(0.0);
 
     let score = Decimal::from_f64_retain(score)
         .unwrap()
