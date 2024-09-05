@@ -13,7 +13,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let glob_pattern = args
         .get(1)
-        .unwrap_or(&"./src/data/*.json".to_string())
+        .unwrap_or(&"./data/*.json".to_string())
         .clone();
     let mut score_map: HashMap<String, HashMap<String, BiomarkerScore>> = HashMap::new();
     let weights = get_user_weights();
