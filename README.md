@@ -24,7 +24,7 @@ The available parameters are:
 
 The biomarker score calculators supports these command line arguments:
 
-```
+```shell
 Calculates biomarker scores based on input data and weight overrides
 
 Usage: biomarker-score-calculator [OPTIONS]
@@ -50,3 +50,31 @@ If you would like to override the default scoring weights/conditions, you can cr
 This override file will set the `first_pmid` condition to have a weight of `100` and any additional PubMed evidences will result an additional `10` points being added to the score. Overwriting the rest of the scoring conditions follows the same format.
 
 A result file named `score_outputs.json` will be created with the calculated score and scoring breakdown for each biomarker file found from the glob pattern.
+
+## Installation
+
+To download and use the biomarker score calculator tool, you have two options:
+
+- Download the pre-compiled release binary (recommended).
+- Manually compile from source.
+
+### Release Binary
+
+Downloading the release binary is the simplest installation option, requiring essentially no additional setup from the user (no setting up dev environments, dealing with dependencies, etc), just downloading the binary executable. To download a release binary, go to the [releases](https://github.com/clinical-biomarkers/biomarker-score-calculator/releases) page, find the desired release version, and download the release binary for your operating system.
+
+### Building From Source
+
+To manually build the binary from source you will need [git](https://git-scm.com/downloads), [Rust](https://doc.rust-lang.org/book/ch01-01-installation.html), and Cargo (which will be installed with Rust) installed.
+
+First clone the repository:
+
+```shell
+git clone git@github.com:clinical-biomarkers/biomarker-score-calculator.git
+```
+
+And then compile the release binary:
+
+```shell
+cd biomarker-score-calculator/
+cargo build --release
+```
