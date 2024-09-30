@@ -1,3 +1,5 @@
+//! Scoring condition defaults
+
 pub const CLINICAL_USE: i32 = 5;
 pub const FIRST_PMID: i32 = 1;
 pub const OTHER_PMID: f64 = 0.2;
