@@ -29,10 +29,7 @@ async fn process_file(
 
     let file_scores = score_map.entry(filename).or_insert_with(HashMap::new);
     for biomarker in biomarkers {
-        let (score, score_info) = calculate_score(
-            &biomarker,
-            weights,
-        );
+        let (score, score_info) = calculate_score(&biomarker, weights);
         file_scores.insert(
             biomarker.biomarker_id.clone(),
             BiomarkerScore { score, score_info },
@@ -41,4 +38,3 @@ async fn process_file(
 
     Ok(())
 }
-
