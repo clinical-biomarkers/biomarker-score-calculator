@@ -8,7 +8,7 @@ The biomarker scoring system is meant for quick assessment of how much existing 
 
 ## Weights/Conditions
 
-The available parameters are:
+The available weights that can be overwritten are:
 
 - `Clinical Use`: The score if a biomarker is already in use in a clinical application (default `5`).
 - `First PMID`: The score for if the biomarker has at least one PubMed paper associated with its evidence (default `1`).
@@ -36,6 +36,7 @@ Usage: biomarker-score-calculator [OPTIONS]
 Options:
   -d, --data <PATTERN>    Glob pattern for input files (e.g. `./data/*.json`) [default: ./data/*.json]
   -o, --overrides <FILE>  Optional JSON file for overriding scoring weights and other scoring conditions
+  -m, --mode <MODE>       Run mode: 'map' to generate score map, 'overwrite' to update source files [default: map]
   -h, --help              Print help
   -V, --version           Print version
 ```
@@ -53,7 +54,62 @@ If you would like to override the default scoring weights/conditions, you can cr
 
 This override file will set the `first_pmid` condition to have a weight of `100` and any additional PubMed evidences will result an additional `10` points being added to the score. Overwriting the rest of the scoring conditions follows the same format.
 
-A result file named `score_outputs.json` will be created with the calculated score and scoring breakdown for each biomarker file found from the glob pattern.
+The `m` or `--mode` command supports two different run modes:
+
+1. `map` (default): Map mode will generate a mapping file of the different files and corresponding biomarker IDs. This approach has a reduced memory footprint and allow you to keep the scores separate from the data. The separate scores can be easily compared and mapped to the data later if needed. The resulting mapping file will generated with the name `biomarker_scores.json`.
+
+```json
+{
+  "oncomx.json": {
+    "AN6628-1": {
+      "score": 1.0,
+      "score_info": {
+        "contributions": [
+          {
+            "c": "first_pmid",
+            "w": 1.0,
+            "f": 1.0
+          },
+          {
+            "c": "other_pmid",
+            "w": 0.2,
+            "f": 0.0
+          },
+          {
+            "c": "first_source",
+            "w": 1.0,
+            "f": 0.0
+          },
+          {
+            "c": "other_source",
+            "w": 0.1,
+            "f": 0.0
+          },
+          {
+            "c": "generic_condition_pen",
+            "w": -4.0,
+            "f": 0.0
+          },
+          {
+            "c": "loinc",
+            "w": 1.0,
+            "f": 0.0
+          }
+        ],
+        "formula": "sum(w*f)",
+        "variables": {
+          "c": "condition",
+          "w": "weight",
+          "f": "frequency"
+        }
+      }
+    }
+  }
+}
+```
+
+2. `overwrite`: Overwrite mode will actually overwrite the source files picked up in the glob pattern. This will directly alter the existing data and write it back out with the updated scores.
+
 
 ## Installation
 

@@ -1,58 +1,13 @@
+//! Models Module
+
 use crate::defaults::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-#[derive(Deserialize, Debug)]
-pub struct Biomarker {
-    pub biomarker_id: String,
-    pub biomarker_component: Vec<Component>,
-    pub condition: Condition,
-    pub evidence_source: Vec<Evidence>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Component {
-    pub specimen: Vec<Specimen>,
-    pub evidence_source: Vec<Evidence>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Condition {
-    pub id: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Evidence {
-    pub id: String,
-    pub database: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Specimen {
-    pub id: String,
-    pub loinc_code: String,
-}
-
-#[derive(Serialize)]
-pub struct ScoreContribution {
-    pub c: String,
-    pub w: f64,
-    pub f: f64,
-}
-
-#[derive(Serialize)]
-pub struct ScoreInfo {
-    pub contributions: Vec<ScoreContribution>,
-    pub formula: String,
-    pub variables: HashMap<String, String>,
-}
-
-#[derive(Serialize)]
-pub struct BiomarkerScore {
-    pub score: f64,
-    pub score_info: ScoreInfo,
-}
+pub mod full_models;
+pub mod minimum_models;
+pub mod traits;
 
 #[derive(Deserialize)]
 pub struct Weights {
@@ -118,7 +73,7 @@ impl Weights {
     }
 }
 
-pub fn get_user_weights(overrides_file: Option<&String>) -> Weights {
+pub fn get_weights_overrides(overrides_file: Option<&String>) -> Weights {
     if let Some(path) = overrides_file {
         let file_contents = fs::read_to_string(path).expect("Could not read overrides file.");
         let overrides =
@@ -127,4 +82,24 @@ pub fn get_user_weights(overrides_file: Option<&String>) -> Weights {
     } else {
         Weights::with_defaults(None)
     }
+}
+
+#[derive(Serialize)]
+pub struct BiomarkerScore {
+    pub score: f64,
+    pub score_info: ScoreInfo,
+}
+
+#[derive(Serialize)]
+pub struct ScoreContribution {
+    pub c: String,
+    pub w: f64,
+    pub f: f64,
+}
+
+#[derive(Serialize)]
+pub struct ScoreInfo {
+    pub contributions: Vec<ScoreContribution>,
+    pub formula: String,
+    pub variables: HashMap<String, String>,
 }
