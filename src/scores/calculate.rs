@@ -1,8 +1,9 @@
 use crate::models::traits::{BiomarkerData, ComponentData, EvidenceData, SpecimenData};
 use crate::prelude::*;
+use crate::rules::engine::apply_custom_rules;
 use std::collections::HashSet;
 
-pub fn calculate_score<B>(biomarker: &B, weights: &Weights) -> (f64, ScoreInfo)
+pub fn calculate_score<B>(biomarker: &B, weights: &Weights, custom_rules: Option<&CustomRules>) -> (f64, ScoreInfo)
 where
     B: BiomarkerData,
     B::Evidence: AsRef<B::Evidence>,
@@ -121,6 +122,12 @@ where
 
     let score = (score * 100.0).round() / 100.0; // Round to 2 decimal places
 
+    let final_score = if let Some(rules) = custom_rules {
+        apply_custom_rules(biomarker, rules, score)
+    } else {
+        score
+    };
+
     let score_info = ScoreInfo {
         contributions,
         formula: "sum(w*f)".to_string(),
@@ -134,5 +141,5 @@ where
         .collect(),
     };
 
-    (score, score_info)
+    (final_score, score_info)
 }

@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "name": "AN6278-1 hardcode -5",
+      "condition": {
+        "type": "FieldEquals",
+        "field": "BiomarkerID",
+        "value": "AN6278-1"
+      },
+      "action": {
+        "type": "SetScore",
+        "value": -5
+      },
+      "priority": 1
+    }
+  ]
+}
