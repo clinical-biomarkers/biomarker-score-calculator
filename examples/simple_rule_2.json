@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "name": "Condition contains DOID multiply 10",
+      "condition": {
+        "type": "FieldAllContains",
+        "field": "ConditionID",
+        "value": "DOID"
+      },
+      "action": {
+        "type": "MultiplyScore",
+        "value": 10
+      },
+      "priority": 1
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "name": "exactly 2 evidence sources add 200",
+      "condition": {
+        "type": "FieldLenEqual",
+        "field": "TopEvidenceSourceDatabase",
+        "value": 2
+      },
+      "action": {
+        "type": "AddToScore",
+        "value": 200
+      },
+      "priority": 1
+    }
+  ]
+}
