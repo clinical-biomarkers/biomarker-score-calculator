@@ -13,31 +13,36 @@ enum SourceType {
 pub async fn overwrite_source_files(
     glob_pattern: &str,
     weights: &Weights,
+    custom_rules: Option<CustomRules>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let files = glob::glob(glob_pattern)?;
 
     for file in files {
         let path = file?;
-        process_file(&path, weights).await?;
+        process_file(&path, weights, custom_rules.as_ref()).await?;
     }
 
     println!("All files have been processed and overwritten.");
     Ok(())
 }
 
-async fn process_file(path: &Path, weights: &Weights) -> Result<(), Box<dyn std::error::Error>> {
+async fn process_file(
+    path: &Path,
+    weights: &Weights,
+    custom_rules: Option<&CustomRules>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let contents = fs::read_to_string(path).await?;
     let mut biomarker_data = deserialize_biomarker_data(&contents)?;
 
     match &mut biomarker_data {
         SourceType::Single(biomarker) => {
-            let (score, score_info) = calculate_score(biomarker, weights);
+            let (score, score_info) = calculate_score(biomarker, weights, custom_rules);
             biomarker.other["score"] = json!(score);
             biomarker.other["score_info"] = json!(score_info);
         }
         SourceType::Multiple(biomarkers) => {
             for biomarker in biomarkers {
-                let (score, score_info) = calculate_score(biomarker, weights);
+                let (score, score_info) = calculate_score(biomarker, weights, custom_rules);
                 biomarker.other["score"] = json!(score);
                 biomarker.other["score_info"] = json!(score_info);
             }

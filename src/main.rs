@@ -1,5 +1,5 @@
 //! Biomarker Score Calculator
-//! 
+//!
 //! This is the main entry point for the Biomarker Score Calculator application.
 //! It handles command-line argument parsing and orchestrates the main workflow
 //! of the program based on the user's input.
@@ -12,7 +12,7 @@ use std::process;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up command-line interface
     let args = Command::new("Biomarker Score Calculator")
-        .version("2.0.0")
+        .version("2.1.0")
         .about("Calculates biomarker scores based on input data and weight overrides")
         .arg(
             Arg::new("data")
@@ -37,19 +37,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .help("Run mode: 'map' to generate score map, 'overwrite' to update source files")
                 .default_value("map"),
         )
+        .arg(
+            Arg::new("rules")
+                .short('r')
+                .long("rules")
+                .value_name("RULES")
+                .help("Optional rules file for applying custom scoring logic"))
         .get_matches();
 
     // Extract command-line arguments
     let glob_pattern = args.get_one::<String>("data").unwrap();
     let overrides_file_path = args.get_one::<String>("overrides");
     let weights = get_weights_overrides(overrides_file_path);
+    let rules_file_path = args.get_one::<String>("rules");
+    let custom_rules = parse_rules(rules_file_path);
     let mode = args.get_one::<String>("mode").unwrap();
 
     // Execute the appropriate function based on the run mode argument
     match mode.as_str() {
         "map" => {
             // Generate a score map and save it to a file
-            let score_map = generate_score_map(glob_pattern, &weights).await?;
+            let score_map = generate_score_map(glob_pattern, &weights, custom_rules).await?;
             let output_file = "biomarker_scores.json";
             let serialized_data = serde_json::to_string_pretty(&score_map)?;
             tokio::fs::write(output_file, serialized_data).await?;
@@ -57,7 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         "overwrite" => {
             // Overwrite the source files with calculated scores
-            overwrite_source_files(glob_pattern, &weights).await?;
+            overwrite_source_files(glob_pattern, &weights, custom_rules).await?;
         }
         _ => {
             // Handle invalid mode input
@@ -68,4 +76,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-

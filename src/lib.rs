@@ -5,6 +5,7 @@ pub mod scores {
     pub mod map;
     pub mod overwrite;
 }
+pub mod rules;
 
 pub mod prelude {
     pub use crate::defaults::*;
@@ -17,4 +18,6 @@ pub mod prelude {
     pub use crate::scores::calculate::calculate_score;
     pub use crate::scores::map::generate_score_map;
     pub use crate::scores::overwrite::overwrite_source_files;
+    pub use crate::rules::schema::CustomRules;
+    pub use crate::rules::parse_rules;
 }
