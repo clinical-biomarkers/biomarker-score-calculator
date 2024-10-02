@@ -4,6 +4,8 @@ The biomarker scoring system is meant for quick assessment of how much existing 
 
 - [Usage](#usage)
 - [Installation](#installation)
+    - [Release Binary](#release-binary)
+    - [Building From Source](#building-from-source)
 - [Extensibility](#extensibility)
   - [Weights](#weights)
   - [Custom Rules](#custom-rules)
