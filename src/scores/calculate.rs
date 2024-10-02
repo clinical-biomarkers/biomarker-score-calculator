@@ -3,7 +3,11 @@ use crate::prelude::*;
 use crate::rules::engine::apply_custom_rules;
 use std::collections::HashSet;
 
-pub fn calculate_score<B>(biomarker: &B, weights: &Weights, custom_rules: Option<&CustomRules>) -> (f64, ScoreInfo)
+pub fn calculate_score<B>(
+    biomarker: &B,
+    weights: &Weights,
+    custom_rules: Option<&CustomRules>,
+) -> (f64, ScoreInfo)
 where
     B: BiomarkerData,
     B::Evidence: AsRef<B::Evidence>,
@@ -122,15 +126,15 @@ where
 
     let score = (score * 100.0).round() / 100.0; // Round to 2 decimal places
 
-    let final_score = if let Some(rules) = custom_rules {
+    let (final_score, applied_rules) = if let Some(rules) = custom_rules {
         apply_custom_rules(biomarker, rules, score)
     } else {
-        score
+        (score, Vec::new())
     };
 
     let score_info = ScoreInfo {
         contributions,
-        formula: "sum(w*f)".to_string(),
+        formula: "sum(w*f)".to_owned(),
         variables: [
             ("c".to_string(), "condition".to_string()),
             ("w".to_string(), "weight".to_string()),
@@ -139,6 +143,11 @@ where
         .iter()
         .cloned()
         .collect(),
+        custom_rules: if !applied_rules.is_empty() {
+            Some(applied_rules)
+        } else {
+            None
+        },
     };
 
     (final_score, score_info)
