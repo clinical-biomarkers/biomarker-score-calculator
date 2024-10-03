@@ -1,7 +1,8 @@
 # Examples
 
-| Filename             | Description                                                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `simple_rule_1.json` | A `FieldEqual` condition that hardcodes a `-5` score for the biomarker `AN6278-1`.                          |
-| `simple_rule_2.json` | A `FieldAllContains` condition that multiplies a score by `10` if the condition ID contaisn `"DOID:"`.      |
-| `simple_rule_3.json` | A `FieldLenEqual` condition that adds `200` to the score if their are exactly 2 top level evidence sources. |
+| Filename             | Description                                                                                                                                                                                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `simple_rule_1.json` | A `FieldEqual` condition that hardcodes a `-5` score for the biomarker `AN6278-1`.                                                                                                                                                                                                                                   |
+| `simple_rule_2.json` | A `FieldAllContains` condition that multiplies a score by `10` if the condition ID contaisn `"DOID:"`.                                                                                                                                                                                                               |
+| `simple_rule_3.json` | A `FieldLenEqual` condition that adds `200` to the score if their are exactly 2 top level evidence sources.                                                                                                                                                                                                          |
+| `and_rule_1.json`    | A example usage of chained conditions using the `And` operator. Uses a `FieldLenEqual` condition for biomarkers with one component evidence source and a `FieldAllContains` condition to check if all loinc codes associated with the biomarker are `"26881-3"`. If both evaluate to `True`, adds `88` to the score. |

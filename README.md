@@ -154,7 +154,7 @@ This override file will set the `first_pmid` condition to have a weight of `100`
 
 ### Custom Rules
 
-The biomarker score calculator also supports a custom format for creating completely custom rules. This format is much more powerful than simply overriding the default weights using an overrides file. If both a rules file and an overrides file is provided, the overrides will be applied first and then the rules.
+The biomarker score calculator also supports a custom format for creating completely custom rules. This format is much more powerful than simply overriding the default weights using an overrides file. If both a rules file and an overrides file is provided, the overrides will be applied first and then the rules. Some example rules are located in the [examples directory](https://github.com/clinical-biomarkers/biomarker-score-calculator/tree/main/examples).
 
 Using the `-r` argument you can pass the path to a JSON file which specifies your custom scoring rules. The format specification is as follows:
 
