@@ -1,0 +1,27 @@
+{
+  "rules": [
+    {
+      "name": "1 component evidence source and has a loinc code of 26881-3",
+      "condition": {
+        "type": "And",
+        "conditions": [
+          {
+            "type": "FieldLenEqual",
+            "field": "ComponentEvidenceSourceDatabase",
+            "value": 1
+          },
+          {
+            "type": "FieldAllContains",
+            "field": "LoincCode",
+            "value": "26881-3"
+          }
+        ]
+      },
+      "action": {
+        "type": "AddToScore",
+        "value": 88
+      },
+      "priority": 1
+    }
+  ]
+}
