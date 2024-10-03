@@ -84,22 +84,39 @@ pub fn get_weights_overrides(overrides_file: Option<&String>) -> Weights {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone)]
 pub struct BiomarkerScore {
     pub score: f64,
     pub score_info: ScoreInfo,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ScoreContribution {
     pub c: String,
     pub w: f64,
     pub f: f64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, Clone)]
 pub struct ScoreInfo {
     pub contributions: Vec<ScoreContribution>,
     pub formula: String,
     pub variables: HashMap<String, String>,
+    pub custom_rules: Option<Vec<CustomRuleApplication>>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+pub struct CustomRuleApplication {
+    pub rule_name: String,
+    pub condition: CustomCondition,
+    pub action: String,
+    pub effect: f64,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(tag = "type", content = "content")]
+pub enum CustomCondition {
+    Simple(String),
+    And(Vec<CustomCondition>),
+    Or(Vec<CustomCondition>),
 }

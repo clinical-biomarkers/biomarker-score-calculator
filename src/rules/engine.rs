@@ -1,22 +1,31 @@
 use crate::models::traits::{BiomarkerData, ComponentData, EvidenceData, SpecimenData};
+use crate::models::{CustomCondition, CustomRuleApplication};
 use crate::rules::schema::{Action, Condition, CustomRules, Field};
 
 pub fn apply_custom_rules<B: BiomarkerData>(
     biomarker: &B,
     rules: &CustomRules,
     current_score: f64,
-) -> f64 {
+) -> (f64, Vec<CustomRuleApplication>) {
     let mut score = current_score;
+    let mut applied_rules = Vec::new();
 
     let mut sorted_rules = rules.rules.clone();
     sorted_rules.sort_by_key(|r| r.priority);
 
     for rule in sorted_rules.iter() {
         if evaluate_condition(biomarker, &rule.condition) {
-            score = apply_action(score, &rule.action);
+            let (new_score, effect) = apply_action(score, &rule.action);
+            score = new_score;
+            applied_rules.push(CustomRuleApplication {
+                rule_name: rule.name.clone(),
+                condition: condition_to_custom_condition(&rule.condition),
+                action: format!("{:?}", rule.action),
+                effect,
+            })
         }
     }
-    score
+    (score, applied_rules)
 }
 
 fn evaluate_condition<B: BiomarkerData>(biomarker: &B, condition: &Condition) -> bool {
@@ -35,9 +44,9 @@ fn evaluate_condition<B: BiomarkerData>(biomarker: &B, condition: &Condition) ->
                     .iter()
                     .all(|f| f.contains(value))
         }
-        Condition::FieldSomeContains { field, value } => {
-            match_field(biomarker, field).iter().any(|f| f.contains(value))
-        }
+        Condition::FieldSomeContains { field, value } => match_field(biomarker, field)
+            .iter()
+            .any(|f| f.contains(value)),
         Condition::FieldLenGreaterThan { field, value } => {
             match_field(biomarker, field).len() as f64 > *value
         }
@@ -54,13 +63,13 @@ fn evaluate_condition<B: BiomarkerData>(biomarker: &B, condition: &Condition) ->
     }
 }
 
-fn apply_action(score: f64, action: &Action) -> f64 {
+fn apply_action(score: f64, action: &Action) -> (f64, f64) {
     match action {
-        Action::SetScore(value) => *value,
-        Action::AddToScore(value) => score + value,
-        Action::MultiplyScore(value) => score * value,
-        Action::SubtractScore(value) => score - value,
-        Action::DivideScore(value) => score / value,
+        Action::SetScore(value) => (*value, *value - score),
+        Action::AddToScore(value) => (score + value, *value),
+        Action::MultiplyScore(value) => (score * value, score * (value - 1.0)),
+        Action::SubtractScore(value) => (score - value, -*value),
+        Action::DivideScore(value) => (score / value, score * (1.0 / value - 1.0)),
     }
 }
 
@@ -85,5 +94,23 @@ fn match_field<B: BiomarkerData>(biomarker: &B, field: &Field) -> Vec<String> {
             .flat_map(|s| s.specimen())
             .map(|l| l.loinc_code().to_owned())
             .collect(),
+    }
+}
+
+fn condition_to_custom_condition(condition: &Condition) -> CustomCondition {
+    match condition {
+        Condition::And { conditions } => CustomCondition::And(
+            conditions
+                .iter()
+                .map(condition_to_custom_condition)
+                .collect(),
+        ),
+        Condition::Or { conditions } => CustomCondition::Or(
+            conditions
+                .iter()
+                .map(condition_to_custom_condition)
+                .collect(),
+        ),
+        _ => CustomCondition::Simple(format!("{:?}", condition)),
     }
 }

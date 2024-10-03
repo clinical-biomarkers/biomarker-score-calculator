@@ -25,7 +25,7 @@ pub struct Rule {
 }
 
 /// The condition for the rule to be applied.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum Condition {
     NonPubmedEvidenceSourceMatch(String),
@@ -40,7 +40,7 @@ pub enum Condition {
 }
 
 /// The fields that custom rules can be applied to.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 pub enum Field {
     BiomarkerID,
     ComponentEvidenceSourceDatabase,
@@ -65,7 +65,7 @@ impl Field {
 }
 
 /// The action to take when a condition is applied.
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type", content = "value")]
 pub enum Action {
     /// Hardcode the biomarker score.
