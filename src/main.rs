@@ -53,6 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let custom_rules = parse_rules(rules_file_path);
     let mode = args.get_one::<String>("mode").unwrap();
 
+    let start_time = std::time::Instant::now();
     // Execute the appropriate function based on the run mode argument
     match mode.as_str() {
         "map" => {
@@ -73,6 +74,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             process::exit(1);
         }
     }
+    let elapsed_time = start_time.elapsed();
+    println!("Took {} seconds.", elapsed_time.as_secs_f64());
 
     Ok(())
 }
