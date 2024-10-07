@@ -1,7 +1,6 @@
 # Biomarker Score Calculator
 
 The biomarker scoring system is meant for quick assessment of how much existing knowledge has already been collected for an entity. Although a default scoring is provided, we recognize that different users will have different use cases, and as a result, will have different views on how various parameters in the scoring should be weighted. This tool allows for quick and portable calculation of biomarker scores and also supports custom scoring rules and weight overrides.
-
 - [Usage](#usage)
 - [Installation](#installation)
     - [Release Binary](#release-binary)
@@ -194,7 +193,7 @@ The `"field"` key in the condition object specifies which field to check the con
 
 The available conditions that are currently supported are:
 
-- `NonPubmedEvidenceSourceMatch`: This condition allows for matching on non-pubmed evidence sources. For example a value of `"clinvar"` will evaluate to `true` if all the non-pubmed evidence source databases for the biomarker are from `clinvar`. Note the `NonPubmedEvidenceSourceMatch` condition does not require the `"field"` key as it will automatically check against the top level and component level evidence sources.
+- `NonPubmedEvidenceSourceMatch`: This condition allows for matching on non-pubmed evidence sources. For example a value of `"clinvar"` will evaluate to `true` if all the non-pubmed evidence source databases for the biomarker are from `clinvar`. Note the `NonPubmedEvidenceSourceMatch` condition can only be used with the `ComponentEvidenceSourceDatabase` and `TopEvidenceSourceDatabase` fields. The value for this condition is checked in a non-case sensitive fashion.
 - `FieldEquals`: This condition allows for checking that a field value(s) equals a certain value. If using on a list field, it will only evaluate to `true` if all the values equal the specified value.
 - `FieldAllContains`: This condition allows for checking that a field value(s) contains some substring. If using on a list field, it will only evaluate to `true` if all the values contain the specified value. Both `FieldAllContains` and `FieldSomeContains` are equivalent when using on an individual field.
 - `FieldSomeContains`: This condition allows for checking that a field value(s) contains some substring. If using on a list field, it will only evaluate to `true` if any of the values contain the specified value. Both `FieldAllContains` and `FieldSomeContains` are equivalent when using on an individual field.
