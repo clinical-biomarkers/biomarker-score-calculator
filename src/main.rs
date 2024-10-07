@@ -12,7 +12,7 @@ use std::process;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up command-line interface
     let args = Command::new("Biomarker Score Calculator")
-        .version("2.2.0")
+        .version("2.3.0")
         .about("Calculates biomarker scores based on input data and weight overrides")
         .arg(
             Arg::new("data")
