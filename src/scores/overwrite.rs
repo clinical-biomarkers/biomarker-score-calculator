@@ -1,5 +1,5 @@
-use super::calculate::calculate_score;
 use crate::prelude::*;
+use crate::CHECKPOINT;
 use serde_json::json;
 use std::path::Path;
 use tokio::fs;
@@ -17,8 +17,11 @@ pub async fn overwrite_source_files(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let files = glob::glob(glob_pattern)?;
 
-    for file in files {
+    for (idx, file) in files.enumerate() {
         let path = file?;
+        if idx % CHECKPOINT == 0 {
+            println!("Checkpoint reached at file index: {}", idx + 1);
+        }
         process_file(&path, weights, custom_rules.as_ref()).await?;
     }
 

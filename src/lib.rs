@@ -15,9 +15,11 @@ pub mod prelude {
     pub use crate::models::{
         get_weights_overrides, BiomarkerScore, ScoreContribution, ScoreInfo, Weights,
     };
+    pub use crate::rules::parse_rules;
+    pub use crate::rules::schema::CustomRules;
     pub use crate::scores::calculate::calculate_score;
     pub use crate::scores::map::generate_score_map;
     pub use crate::scores::overwrite::overwrite_source_files;
-    pub use crate::rules::schema::CustomRules;
-    pub use crate::rules::parse_rules;
 }
+
+pub const CHECKPOINT: usize = 1500;

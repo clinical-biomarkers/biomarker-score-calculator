@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::CHECKPOINT;
 use std::collections::HashMap;
 use std::path::Path;
 use tokio::fs;
@@ -11,8 +12,11 @@ pub async fn generate_score_map(
     let mut score_map = HashMap::new();
     let files = glob::glob(glob_pattern)?;
 
-    for file in files {
+    for (idx, file) in files.enumerate() {
         let path = file?;
+        if idx % CHECKPOINT == 0 {
+            println!("Checkpoint reached at file index: {}", idx + 1);
+        }
         process_file(&path, weights, &mut score_map, custom_rules.as_ref()).await?;
     }
 
