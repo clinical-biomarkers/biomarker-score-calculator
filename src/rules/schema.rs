@@ -28,7 +28,7 @@ pub struct Rule {
 #[derive(Deserialize, Clone, Debug)]
 #[serde(tag = "type")]
 pub enum Condition {
-    NonPubmedEvidenceSourceMatch(String),
+    NonPubmedEvidenceSourceMatch { field: Field, value: String },
     FieldEquals { field: Field, value: String },
     FieldAllContains { field: Field, value: String },
     FieldSomeContains { field: Field, value: String },

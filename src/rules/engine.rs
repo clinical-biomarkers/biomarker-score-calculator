@@ -13,6 +13,9 @@ pub fn apply_custom_rules<B: BiomarkerData>(
     let mut sorted_rules = rules.rules.clone();
     sorted_rules.sort_by_key(|r| r.priority);
 
+    let conditions: Vec<Condition> = sorted_rules.iter().map(|r| r.condition.clone()).collect();
+    preprocess_conditions(&conditions);
+
     for rule in sorted_rules.iter() {
         if evaluate_condition(biomarker, &rule.condition) {
             let (new_score, effect) = apply_action(score, &rule.action);
@@ -30,11 +33,17 @@ pub fn apply_custom_rules<B: BiomarkerData>(
 
 fn evaluate_condition<B: BiomarkerData>(biomarker: &B, condition: &Condition) -> bool {
     match condition {
-        Condition::NonPubmedEvidenceSourceMatch(value) => biomarker
-            .evidence_sources()
-            .iter()
-            .filter(|e| e.database().to_lowercase() != "pubmed")
-            .all(|e| e.database() == value),
+        Condition::NonPubmedEvidenceSourceMatch { field, value } => {
+            let matched_sources: Vec<String> = match_field(biomarker, field)
+                .iter()
+                .filter(|e| e.to_lowercase() != "pubmed")
+                .cloned()
+                .collect();
+            !matched_sources.is_empty()
+                && matched_sources
+                    .iter()
+                    .all(|e| e.eq_ignore_ascii_case(value))
+        }
         Condition::FieldEquals { field, value } => {
             match_field(biomarker, field).iter().all(|f| f == value)
         }
@@ -112,5 +121,25 @@ fn condition_to_custom_condition(condition: &Condition) -> CustomCondition {
                 .collect(),
         ),
         _ => CustomCondition::Simple(format!("{:?}", condition)),
+    }
+}
+
+fn preprocess_conditions(conditions: &Vec<Condition>) {
+    for condition in conditions.iter() {
+        match condition {
+            Condition::NonPubmedEvidenceSourceMatch { field, value: _ } => match field {
+                Field::ComponentEvidenceSourceDatabase | Field::TopEvidenceSourceDatabase => {}
+                _ => {
+                    println!(
+                            "NonPubmedEvidenceSourceMatch can only be used with ComponentEvidenceSourceDatabase or TopEvidenceSourceDatabase fields"
+                        );
+                    std::process::exit(1);
+                }
+            },
+            Condition::And { conditions } | Condition::Or { conditions } => {
+                preprocess_conditions(conditions);
+            }
+            _ => {}
+        }
     }
 }
