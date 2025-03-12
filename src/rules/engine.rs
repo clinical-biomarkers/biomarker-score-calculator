@@ -91,7 +91,10 @@ fn match_field<B: BiomarkerData>(biomarker: &B, field: &Field) -> Vec<String> {
             .flat_map(|c| c.evidence_source())
             .map(|e| e.database().to_owned())
             .collect(),
-        Field::ConditionID => vec![biomarker.condition_id().to_owned()],
+        Field::ConditionID => match biomarker.condition_id() {
+            Some(id) => vec![id.to_owned()],
+            None => vec![],
+        },
         Field::TopEvidenceSourceDatabase => biomarker
             .evidence_sources()
             .iter()

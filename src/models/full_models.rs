@@ -12,7 +12,7 @@ use serde_json::Value;
 pub struct Biomarker {
     pub biomarker_id: String,
     pub biomarker_component: Vec<Component>,
-    pub condition: Condition,
+    pub condition: Option<Condition>,
     pub evidence_source: Vec<Evidence>,
     #[serde(flatten)]
     pub other: Value,
@@ -25,12 +25,20 @@ impl BiomarkerData for Biomarker {
     fn biomarker_id(&self) -> &str {
         &self.biomarker_id
     }
+
     fn biomarker_components(&self) -> &[Self::Component] {
         &self.biomarker_component
     }
-    fn condition_id(&self) -> &str {
-        &self.condition.id
+
+    fn condition_id(&self) -> Option<&str> {
+        if let Some(condition) = &self.condition {
+            if !condition.id.is_empty() {
+                return Some(&condition.id)
+            }
+        }
+        None
     }
+
     fn evidence_sources(&self) -> &[Self::Evidence] {
         &self.evidence_source
     }
