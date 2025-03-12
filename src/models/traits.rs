@@ -7,7 +7,7 @@ pub trait BiomarkerData {
 
     fn biomarker_id(&self) -> &str;
     fn biomarker_components(&self) -> &[Self::Component];
-    fn condition_id(&self) -> &str;
+    fn condition_id(&self) -> Option<&str>;
     fn evidence_sources(&self) -> &[Self::Evidence];
 }
 

@@ -1,7 +1,7 @@
 //! Minimum Models Module
 //!
-//! The minimum viable models for calculating scores. Used for 
-//! generating the external score maps in a synchronous fashion. 
+//! The minimum viable models for calculating scores. Used for
+//! generating the external score maps in a synchronous fashion.
 //! Has a reduced memory footprint.
 
 use super::traits::{BiomarkerData, ComponentData, EvidenceData, SpecimenData};
@@ -11,7 +11,7 @@ use serde::Deserialize;
 pub struct Biomarker {
     pub biomarker_id: String,
     pub biomarker_component: Vec<Component>,
-    pub condition: Condition,
+    pub condition: Option<Condition>,
     pub evidence_source: Vec<Evidence>,
 }
 
@@ -22,12 +22,20 @@ impl BiomarkerData for Biomarker {
     fn biomarker_id(&self) -> &str {
         &self.biomarker_id
     }
+
     fn biomarker_components(&self) -> &[Self::Component] {
         &self.biomarker_component
     }
-    fn condition_id(&self) -> &str {
-        &self.condition.id
+
+    fn condition_id(&self) -> Option<&str> {
+        if let Some(condition) = &self.condition {
+            if !condition.id.is_empty() {
+                return Some(&condition.id);
+            }
+        }
+        None
     }
+
     fn evidence_sources(&self) -> &[Self::Evidence] {
         &self.evidence_source
     }

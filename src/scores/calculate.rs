@@ -84,16 +84,18 @@ where
 
     // Check for generic condition penalty
     let mut generic_condition_count = 0;
-    if weights
-        .generic_conditions
-        .clone()
-        .unwrap_or(GENERIC_CONDITIONS.iter().map(|&s| s.to_owned()).collect())
-        .contains(biomarker.condition_id())
-    {
-        score += weights
-            .generic_condition_pen
-            .unwrap_or(GENERIC_CONDITION_PEN) as f64;
-        generic_condition_count += 1;
+    if let Some(condition_id) = biomarker.condition_id() {
+        if !condition_id.is_empty() && weights
+            .generic_conditions
+            .clone()
+            .unwrap_or(GENERIC_CONDITIONS.iter().map(|&s| s.to_owned()).collect())
+            .contains(condition_id)
+        {
+            score += weights
+                .generic_condition_pen
+                .unwrap_or(GENERIC_CONDITION_PEN) as f64;
+            generic_condition_count += 1;
+        }
     }
     contributions.push(ScoreContribution {
         c: "generic_condition_pen".to_string(),
